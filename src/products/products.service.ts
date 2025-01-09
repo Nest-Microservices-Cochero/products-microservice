@@ -1,4 +1,5 @@
 import {
+  HttpStatus,
   Injectable,
   Logger,
   NotFoundException,
@@ -8,6 +9,7 @@ import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { PrismaClient } from '@prisma/client';
 import { PaginationDto } from '../common/dto/pagination.dto';
+import { RpcException } from '@nestjs/microservices';
 
 @Injectable()
 
@@ -54,13 +56,17 @@ export class ProductsService extends PrismaClient implements OnModuleInit {
     };
   }
 
-  /// Solo buscar entre los que están habilitados
   async findOne(id: number) {
     const product = await this.product.findFirst({
       where: { id: id, available: true },
     });
 
-    if (!product) throw new NotFoundException('No found product with id ' + id);
+    if (!product)
+      /// Enviamos un objeto con estas dos propiedades
+      throw new RpcException({
+        status: HttpStatus.BAD_REQUEST,
+        message: 'No found product with id ' + id,
+      });
 
     return product;
   }
@@ -77,7 +83,6 @@ export class ProductsService extends PrismaClient implements OnModuleInit {
     });
   }
 
-  ///1) Inhabilitar un producto
   async remove(id: number) {
     await this.findOne(id);
 
@@ -91,5 +96,23 @@ export class ProductsService extends PrismaClient implements OnModuleInit {
     });
 
     return product;
+  }
+
+  /// recibir los ids de producto validar su existencia y retorna la info de estos productos
+  async validateProducts(ids: number[]) {
+    ids = Array.from(new Set(ids));
+
+    const products = await this.product.findMany({
+      where: { id: { in: ids }, available: true },
+    });
+
+    if (products.length !== ids.length) {
+      throw new RpcException({
+        message: 'One or more products not found',
+        status: HttpStatus.BAD_REQUEST,
+      });
+    }
+
+    return products;
   }
 }

@@ -34,16 +34,20 @@ export class ProductsController {
 
   //@Patch(':id')
   @MessagePattern({ cmd: 'update_product' })
-  //- aca hay Param y Body
   //@Body() updateProductDto: UpdateProductDto //@Param('id', ParseIntPipe) id: number,
   update(@Payload() updateProductDto: UpdateProductDto) {
     return this.productsService.update(updateProductDto.id, updateProductDto);
   }
 
   //@Delete(':id')
-  /// Delete
   @MessagePattern({ cmd: 'delete_product' })
   remove(@Payload('id', ParseIntPipe) id: number) {
     return this.productsService.remove(id);
+  }
+
+  /// Método para validar un listado de productos
+  @MessagePattern({ cmd: 'validate_products' })
+  validateProducts(@Payload() ids: number[]) {
+    return this.productsService.validateProducts(ids);
   }
 }
